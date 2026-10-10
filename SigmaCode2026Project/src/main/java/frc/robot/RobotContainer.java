@@ -2,6 +2,8 @@ package frc.robot;
 
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.auto.NamedCommands;
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -30,11 +32,14 @@ import frc.robot.subsystems.SpinDexer.SpinDexerIOReal;
 import frc.robot.subsystems.SpinDexer.SpinDexerIOSim;
 import frc.robot.subsystems.SpinDexer.SpinDexerMech;
 import frc.robot.subsystems.drive.Drive;
-import frc.robot.subsystems.drive.GyroIO;
+import frc.robot.subsystems.drive.DriveConstants;
 import frc.robot.subsystems.drive.GyroIOPigeon2;
+import frc.robot.subsystems.drive.GyroIOSim;
 import frc.robot.subsystems.drive.ModuleIOMix;
 import frc.robot.subsystems.drive.ModuleIOSim;
 import frc.robot.subsystems.leds.LEDs;
+import org.ironmaple.simulation.SimulatedArena;
+import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
 /**
@@ -44,6 +49,8 @@ import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
  * subsystems, commands, and button mappings) should be declared here.
  */
 public class RobotContainer {
+
+  private SwerveDriveSimulation driveSim;
   // The robot's subsystems and commands are defined here...
   private Shooter shooterMech;
   private Drive swerveDrive;
@@ -77,29 +84,37 @@ public class RobotContainer {
 
         break;
       case SIM:
+        driveSim =
+            new SwerveDriveSimulation(
+                DriveConstants.mapleSimConfig, new Pose2d(2, 2, new Rotation2d()));
+        SimulatedArena.getInstance().addDriveTrainSimulation(driveSim);
         shooterMech = new Shooter(new ShooterIOSim());
         spinDexerMech = new SpinDexerMech(new SpinDexerIOSim());
         intakeMech = new IntakeMech(new IntakeIOSim());
         swerveDrive =
             new Drive(
-                new GyroIO() {},
-                new ModuleIOSim(),
-                new ModuleIOSim(),
-                new ModuleIOSim(),
-                new ModuleIOSim());
-        leds = new LEDs();
+                new GyroIOSim(driveSim.getGyroSimulation()),
+                new ModuleIOSim(driveSim.getModules()[0]),
+                new ModuleIOSim(driveSim.getModules()[1]),
+                new ModuleIOSim(driveSim.getModules()[2]),
+                new ModuleIOSim(driveSim.getModules()[3]));
+        leds = null;
       default:
+        driveSim =
+            new SwerveDriveSimulation(
+                DriveConstants.mapleSimConfig, new Pose2d(2, 2, new Rotation2d()));
+        SimulatedArena.getInstance().addDriveTrainSimulation(driveSim);
         shooterMech = new Shooter(new ShooterIOReal());
         spinDexerMech = new SpinDexerMech(new SpinDexerIOSim());
         intakeMech = new IntakeMech(new IntakeIOSim());
         swerveDrive =
             new Drive(
-                new GyroIO() {},
-                new ModuleIOSim(),
-                new ModuleIOSim(),
-                new ModuleIOSim(),
-                new ModuleIOSim());
-        leds = new LEDs();
+                new GyroIOSim(driveSim.getGyroSimulation()),
+                new ModuleIOSim(driveSim.getModules()[0]),
+                new ModuleIOSim(driveSim.getModules()[1]),
+                new ModuleIOSim(driveSim.getModules()[2]),
+                new ModuleIOSim(driveSim.getModules()[3]));
+        leds = null;
 
         break;
     }
