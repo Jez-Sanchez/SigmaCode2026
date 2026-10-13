@@ -5,10 +5,15 @@
 package frc.robot;
 
 import com.revrobotics.util.StatusLogger;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import frc.robot.simutils.Sim3DWorld;
 import frc.robot.subsystems.clock.RobotClock;
-import org.ironmaple.simulation.SimulatedArena;
 import org.littletonrobotics.junction.LogFileUtil;
 import org.littletonrobotics.junction.LoggedRobot;
 import org.littletonrobotics.junction.Logger;
@@ -27,6 +32,10 @@ public class Robot extends LoggedRobot {
 
   private final RobotContainer m_robotContainer;
   private final RobotClock m_robotClock = new RobotClock();
+
+  private Sim3DWorld simWorld;
+
+  private CommandXboxController driveController = new CommandXboxController(0);
 
   /**
    * This function is run when the robot is first started up and should be used for any
@@ -152,11 +161,37 @@ public class Robot extends LoggedRobot {
 
   /** This function is called once when the robot is first started up. */
   @Override
-  public void simulationInit() {}
+  public void simulationInit() {
+    simWorld = new Sim3DWorld();
+  }
 
   /** This function is called periodically whilst in simulation. */
   @Override
   public void simulationPeriodic() {
-    SimulatedArena.getInstance().simulationPeriodic();
+    m_robotContainer.updateSimulation();
+
+    if (simWorld != null) {
+      simWorld.periodic();
+      ChassisSpeeds speeds =
+          new ChassisSpeeds(
+              driveController.getLeftY() * 5.07,
+              driveController.getLeftX() * 5.07,
+              (driveController.getRightX() * 2 * Math.PI)); // was 0.9
+      boolean isFlipped =
+          DriverStation.getAlliance().isPresent()
+              && DriverStation.getAlliance().get() == Alliance.Red;
+      speeds =
+          ChassisSpeeds.fromFieldRelativeSpeeds(
+              speeds,
+              isFlipped
+                  ? simWorld
+                      .robot()
+                      .getPose3d()
+                      .getRotation()
+                      .toRotation2d()
+                      .plus(Rotation2d.k180deg)
+                  : simWorld.robot().getPose3d().getRotation().toRotation2d());
+      simWorld.robot().setTargetSpeeds(speeds);
+    }
   }
 }

@@ -78,6 +78,12 @@ dependencies {
     implementation wpi.java.deps.wpilib()
     implementation wpi.java.vendor.java()
     implementation 'com.google.code.gson:gson:2.13.2'
+    // JVM library:
+    implementation("com.github.stephengold:jolt-jni-Windows64:6.1.1")
+    implementation("io.github.electrostat-lab:snaploader:1.1.1-stable")
+    // native libraries:
+    runtimeOnly("com.github.stephengold:jolt-jni-Windows64:6.1.1:DebugSp")
+    runtimeOnly("com.github.oshi:oshi-core:7.4.2")
 
     roborioDebug wpi.java.deps.wpilibJniDebug(wpi.platforms.roborio)
     roborioDebug wpi.java.vendor.jniDebug(wpi.platforms.roborio)
@@ -102,6 +108,10 @@ dependencies {
 
 test {
     useJUnitPlatform()
+    testLogging {
+        exceptionFormat = 'full'
+        showStandardStreams = true
+    }
     systemProperty 'junit.jupiter.extensions.autodetection.enabled', 'true'
 }
 

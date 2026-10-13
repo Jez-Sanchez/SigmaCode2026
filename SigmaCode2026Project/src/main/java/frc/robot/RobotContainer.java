@@ -40,6 +40,7 @@ import frc.robot.subsystems.drive.ModuleIOSim;
 import frc.robot.subsystems.leds.LEDs;
 import org.ironmaple.simulation.SimulatedArena;
 import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
+import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
 /**
@@ -79,7 +80,8 @@ public class RobotContainer {
                 new ModuleIOMix(0),
                 new ModuleIOMix(1),
                 new ModuleIOMix(2),
-                new ModuleIOMix(3));
+                new ModuleIOMix(3),
+                (pose) -> {});
         leds = new LEDs();
 
         break;
@@ -88,17 +90,22 @@ public class RobotContainer {
             new SwerveDriveSimulation(
                 DriveConstants.mapleSimConfig, new Pose2d(2, 2, new Rotation2d()));
         SimulatedArena.getInstance().addDriveTrainSimulation(driveSim);
-        shooterMech = new Shooter(new ShooterIOSim());
-        spinDexerMech = new SpinDexerMech(new SpinDexerIOSim());
-        intakeMech = new IntakeMech(new IntakeIOSim());
         swerveDrive =
             new Drive(
                 new GyroIOSim(driveSim.getGyroSimulation()),
                 new ModuleIOSim(driveSim.getModules()[0]),
                 new ModuleIOSim(driveSim.getModules()[1]),
                 new ModuleIOSim(driveSim.getModules()[2]),
-                new ModuleIOSim(driveSim.getModules()[3]));
+                new ModuleIOSim(driveSim.getModules()[3]),
+                driveSim::setSimulationWorldPose);
+        shooterMech =
+            new Shooter(
+                new ShooterIOSim(swerveDrive::getPose, swerveDrive::getDriveSpeedsFieldRelative));
+        spinDexerMech = new SpinDexerMech(new SpinDexerIOSim());
+        intakeMech = new IntakeMech(new IntakeIOSim(driveSim));
+
         leds = null;
+        break;
       default:
         driveSim =
             new SwerveDriveSimulation(
@@ -106,14 +113,15 @@ public class RobotContainer {
         SimulatedArena.getInstance().addDriveTrainSimulation(driveSim);
         shooterMech = new Shooter(new ShooterIOReal());
         spinDexerMech = new SpinDexerMech(new SpinDexerIOSim());
-        intakeMech = new IntakeMech(new IntakeIOSim());
+        intakeMech = new IntakeMech(new IntakeIOSim(driveSim));
         swerveDrive =
             new Drive(
                 new GyroIOSim(driveSim.getGyroSimulation()),
                 new ModuleIOSim(driveSim.getModules()[0]),
                 new ModuleIOSim(driveSim.getModules()[1]),
                 new ModuleIOSim(driveSim.getModules()[2]),
-                new ModuleIOSim(driveSim.getModules()[3]));
+                new ModuleIOSim(driveSim.getModules()[3]),
+                (pose) -> {});
         leds = null;
 
         break;
@@ -185,7 +193,14 @@ public class RobotContainer {
     bY = driver.y();
   }
 
-  public void updateSimulation() {}
+  public void updateSimulation() {
+    if (Constants.currentMode != Constants.Mode.SIM) return;
+    SimulatedArena.getInstance().simulationPeriodic();
+    Logger.recordOutput("FieldSimulation/RobotPosition", driveSim.getSimulatedDriveTrainPose());
+    Logger.recordOutput(
+        "FieldSimulation/GamePieces",
+        SimulatedArena.getInstance().getGamePiecesArrayByType("Fuel"));
+  }
   /**
    * Use this to pass the autonomous command to the main {@link Robot} class.
    *

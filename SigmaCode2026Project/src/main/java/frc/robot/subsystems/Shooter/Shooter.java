@@ -4,6 +4,7 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.*;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.subsystems.Shooter.ShooterConstants.ShooterWheelState;
@@ -31,11 +32,6 @@ public class Shooter extends SubsystemBase {
 
   public Shooter(ShooterIO io) {
     this.io = io;
-    // if (DriverStation.getAlliance().get() == Alliance.Blue) {
-    //   blueAlliance = true;
-    // } else {
-    //   blueAlliance = false;
-    // }
   }
 
   @Override
@@ -54,6 +50,11 @@ public class Shooter extends SubsystemBase {
             * ShooterConstants.shooterWheelRadiusMeters
             * 2
             * Math.PI);
+    if (DriverStation.getAlliance().map(alliance -> alliance == Alliance.Blue).orElse(false)) {
+      blueAlliance = true;
+    } else {
+      blueAlliance = false;
+    }
   }
 
   // ── Turret Rotation API ───────────────────────────────────────────────────
@@ -101,11 +102,11 @@ public class Shooter extends SubsystemBase {
     double rpm =
         getInterpolated(Double.valueOf(distance), ShooterConstants.ShooterStates.shooterRPMMap);
     if (state == ShooterWheelState.FULLSPEED) {
-      io.setShooterVelocity(rpm);
+      io.setShooterVelocity(rpm, true);
     } else if (state == ShooterWheelState.DEFAULTSPEED) {
-      io.setShooterVelocity(2500);
+      io.setShooterVelocity(2500, false);
     } else {
-      io.setShooterVelocity(700);
+      io.setShooterVelocity(700, false);
     }
   }
 

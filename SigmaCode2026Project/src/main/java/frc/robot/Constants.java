@@ -8,7 +8,7 @@ import edu.wpi.first.wpilibj.RobotBase;
  * globally (i.e. public static). Do not put anything functional in this class.
  */
 public final class Constants {
-
+  public static int simFuelCount = 0;
   public static final Mode simMode = Mode.SIM;
   public static final Mode currentMode = RobotBase.isReal() ? Mode.REAL : simMode;
 

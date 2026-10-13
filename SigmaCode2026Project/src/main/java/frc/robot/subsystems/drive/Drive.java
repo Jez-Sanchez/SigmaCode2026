@@ -53,6 +53,7 @@ import frc.robot.subsystems.Shooter.ShooterConstants.ShooterStatus;
 import frc.robot.util.LocalADStarAK;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
 import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
@@ -94,13 +95,17 @@ public class Drive extends SubsystemBase {
   private static SwerveDrivePoseEstimator poseEstimator =
       new SwerveDrivePoseEstimator(kinematics, rawGyroRotation, lastModulePositions, new Pose2d());
 
+  private final Consumer<Pose2d> resetSimulationPoseCallBack;
+
   public Drive(
       GyroIO gyroIO,
       ModuleIO flModuleIO,
       ModuleIO frModuleIO,
       ModuleIO blModuleIO,
-      ModuleIO brModuleIO) {
+      ModuleIO brModuleIO,
+      Consumer<Pose2d> resetSimulationCallback) {
     this.gyroIO = gyroIO;
+    this.resetSimulationPoseCallBack = resetSimulationCallback;
     modules[0] = new Module(flModuleIO, 0);
     modules[1] = new Module(frModuleIO, 1);
     modules[2] = new Module(blModuleIO, 2);
@@ -150,13 +155,14 @@ public class Drive extends SubsystemBase {
                 (state) -> Logger.recordOutput("Drive/SysIdState", state.toString())),
             new SysIdRoutine.Mechanism(
                 (voltage) -> runCharacterization(voltage.in(Volts)), null, this));
-    if (DriverStation.getAlliance().map(alliance -> alliance == Alliance.Red).orElse(false)) {
-      isFlipped = true;
-    }
   }
 
   @Override
   public void periodic() {
+
+    if (DriverStation.getAlliance().map(alliance -> alliance == Alliance.Red).orElse(false)) {
+      isFlipped = true;
+    }
     odometryLock.lock(); // Prevents odometry updates while reading data
     gyroIO.updateInputs(gyroInputs);
     Logger.processInputs("Drive/Gyro", gyroInputs);
@@ -386,7 +392,7 @@ public class Drive extends SubsystemBase {
 
   /** Resets the current odometry pose. */
   public void resetOdometry(Pose2d pose) {
-    // resetSimulationPoseCallBack.accept(pose);
+    resetSimulationPoseCallBack.accept(pose);
     poseEstimator.resetPosition(rawGyroRotation, getModulePositions(), pose);
   }
 
@@ -470,7 +476,7 @@ public class Drive extends SubsystemBase {
 
   /** Returns the current odometry rotation. */
   public Rotation2d getRotation() {
-    return gyroIO.getYaw();
+    return poseEstimator.getEstimatedPosition().getRotation();
   }
 
   /** Resets the current odometry pose. */

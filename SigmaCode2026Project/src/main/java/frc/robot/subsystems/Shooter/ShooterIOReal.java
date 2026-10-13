@@ -266,7 +266,7 @@ public class ShooterIOReal implements ShooterIO {
   }
 
   @Override
-  public void setShooterVelocity(double velocityRotPerMin) {
+  public void setShooterVelocity(double velocityRotPerMin, boolean fullSpeed) {
     shooterLeft.setControl(shooterVelocityReq.withSlot(0).withVelocity(velocityRotPerMin / 60));
     shooterRight.setControl(shooterVelocityReq.withSlot(0).withVelocity(velocityRotPerMin / 60));
   }
