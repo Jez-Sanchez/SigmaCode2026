@@ -40,11 +40,11 @@ public final class RobotBody {
       double superWidthM, // Y footprint of the part above the chassis
       double maxAccelMps2, // limits the push so the sim cannot accelerate impossibly hard
       double maxAngularAccelRadPerSec2,
-      double velocityTimeConstantSec, // smaller = snappier tracking of the commanded speed
+      double velocityTimeConstantSec, // smaller = snappier tracking of the commanded speed ORIGINALLY 0.1
       float friction) {
 
     public static Config defaults() {
-      return new Config(52.0, 0.9, 0.9, 0.25, 0.6, 0.6, 0.6, 6.0, 20.0, 0.1, 0.1f);
+      return new Config(52.0, 0.9, 0.9, 0.25, 0.6, 0.6, 0.6, 6.0, 20.0, 0.05, 0.1f);
     }
   }
 
@@ -168,12 +168,12 @@ public final class RobotBody {
     Vec3 w = bi.getAngularVelocity(bodyId);
 
     double yaw = getPose3d().getRotation().getZ();
-    double c = Math.cos(yaw);
-    double s = Math.sin(yaw);
+    double xDir = Math.cos(yaw);
+    double yDir = Math.sin(yaw);
 
     // Commanded velocity, rotated from the robot frame into the world frame
-    double targetVx = c * target.vxMetersPerSecond - s * target.vyMetersPerSecond;
-    double targetVy = s * target.vxMetersPerSecond + c * target.vyMetersPerSecond;
+    double targetVx = xDir * target.vxMetersPerSecond - yDir * target.vyMetersPerSecond;
+    double targetVy = yDir * target.vxMetersPerSecond + xDir * target.vyMetersPerSecond;
 
     double tau = cfg.velocityTimeConstantSec();
     double ax = (targetVx - v.getX()) / tau;

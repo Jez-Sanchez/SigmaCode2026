@@ -59,6 +59,14 @@ public class FieldBuilder {
     public static final double TRENCH_CENTER_X = 4.6;
     public static final double TRENCH_CENTER_Y = TRENCH_WIDTH / 2;
 
+    //Hubs
+    public static final double HUB_CENTER_X = 4.6;
+    public static final double HUB_CENTER_Y = 8.07 / 2.0; //Width of field divided by half since Hub is in center of the field Y axis wise
+    
+    public static final double HUB_WIDTH = 1.1938;
+    public static final double HUB_HEIGHT = HUB_WIDTH;
+
+
     // Surface frictions
     public static final double FLOOR_FRICTION = 0.8f;
     public static final double WALL_FRICTION = 0.3f;
