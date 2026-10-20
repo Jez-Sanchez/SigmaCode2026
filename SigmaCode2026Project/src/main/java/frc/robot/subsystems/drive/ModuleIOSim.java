@@ -1,24 +1,19 @@
 package frc.robot.subsystems.drive;
 
-import static edu.wpi.first.units.Units.Amps;
 import static edu.wpi.first.units.Units.Radians;
-import static edu.wpi.first.units.Units.RadiansPerSecond;
-import static edu.wpi.first.units.Units.Volts;
 import static frc.robot.subsystems.drive.DriveConstants.*;
 
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.units.Units;
-import edu.wpi.first.units.measure.Current;
+import frc.robot.simutils.Sim3DWorld;
 import frc.robot.simutils.SwerveModuleSim;
 import frc.robot.util.SparkUtil;
 import java.util.Arrays;
-import org.ironmaple.simulation.drivesims.SwerveModuleSimulation;
-import org.ironmaple.simulation.motorsims.SimulatedMotorController.GenericMotorController;
 
 public class ModuleIOSim implements ModuleIO {
 
-  private SwerveModuleSimulation moduleSim;
+  private final Sim3DWorld simWorld;
+  private final int moduleIndex;
   private boolean driveCloseLoop = false;
   private boolean turnCloseLoop = false;
   private final PIDController driveController = new PIDController(driveSimP, 0, 0);
@@ -29,9 +24,10 @@ public class ModuleIOSim implements ModuleIO {
 
   private SwerveModuleSim swerveSim;
 
-  public ModuleIOSim(SwerveModuleSim swerveSim) {
+  public ModuleIOSim(Sim3DWorld simWorld, int moduleIndex) {
 
-    this.swerveSim= swerveSim;
+    this.simWorld = simWorld;
+    this.moduleIndex = moduleIndex;
 
     turnController.enableContinuousInput(-Math.PI, Math.PI);
   }
@@ -42,38 +38,49 @@ public class ModuleIOSim implements ModuleIO {
       driveAppliedVolts =
           driveFFVolts
               + driveController.calculate(
-                  moduleSim.getDriveWheelFinalSpeed().in(Units.RadiansPerSecond));
+                  simWorld.swerve().getModule(moduleIndex).getDrivePositionRad());
 
     } else {
       driveController.reset();
     }
     if (turnCloseLoop) {
-      turnAppliedVolts = turnController.calculate(moduleSim.getSteerAbsoluteFacing().getRadians());
+      turnAppliedVolts =
+          turnController.calculate(
+              simWorld.swerve().getModule(moduleIndex).getSteerAngle().getRadians());
 
     } else {
       turnController.reset();
     }
-    swerveSim.setDriveVoltage(driveAppliedVolts);
-    swerveSim.setSteerVoltage(turnAppliedVolts);
+    simWorld.swerve().getModule(moduleIndex).setDriveVoltage(driveAppliedVolts);
+    simWorld.swerve().getModule(moduleIndex).setSteerVoltage(turnAppliedVolts);
 
     inputs.driveConnected = true;
-    inputs.drivePositionRad = swerveSim.getDrivePositionRad();
-    inputs.driveVelocityRadPerSec =  swerveSim.getDriveVelocityRadPerSec();
+    inputs.drivePositionRad = simWorld.swerve().getModule(moduleIndex).getDrivePositionRad();
+    inputs.driveVelocityRadPerSec =
+        simWorld.swerve().getModule(moduleIndex).getDriveVelocityRadPerSec();
     inputs.driveAppliedVolts = driveAppliedVolts;
-    inputs.driveCurrentAmps = Math.abs(swerveSim.getDriveCurrentAmps());
+    inputs.driveCurrentAmps =
+        Math.abs(simWorld.swerve().getModule(moduleIndex).getDriveCurrentAmps());
 
     inputs.turnConnected = true;
-    inputs.turnPosition = swerveSim.getSteerAngle();
-    inputs.turnVelocityRadPerSec = swerveSim.getSteerVelocityRadPerSec();
+    inputs.turnPosition = simWorld.swerve().getModule(moduleIndex).getSteerAngle();
+    inputs.turnVelocityRadPerSec =
+        simWorld.swerve().getModule(moduleIndex).getSteerVelocityRadPerSec();
     inputs.turnAppliedVolts = turnAppliedVolts;
-    inputs.turnCurrentAmps = Math.abs(swerveSim.getSteerCurrentAmps());
+    inputs.turnCurrentAmps =
+        Math.abs(simWorld.swerve().getModule(moduleIndex).getSteerCurrentAmps());
 
     inputs.odometryTimestamps = SparkUtil.getSimulationOdometryTimeStamps();
     inputs.odometryDrivePositionsRad =
-        Arrays.stream(moduleSim.getCachedDriveWheelFinalPositions())//Change later
+        Arrays.stream(
+                simWorld
+                    .swerve()
+                    .getModule(moduleIndex)
+                    .getCachedDrivePositionsRad()) // Change later
             .mapToDouble(angle -> angle.in(Radians))
             .toArray();
-    inputs.odometryTurnPositions = moduleSim.getCachedSteerAbsolutePositions();//Change later
+    inputs.odometryTurnPositions =
+        simWorld.swerve().getModule(moduleIndex).getCachedSteerPosition(); // Change later
   }
 
   @Override

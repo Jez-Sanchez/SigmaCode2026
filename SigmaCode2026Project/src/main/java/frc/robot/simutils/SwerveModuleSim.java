@@ -1,5 +1,7 @@
 package frc.robot.simutils;
 
+import static edu.wpi.first.units.Units.Radians;
+
 import com.github.stephengold.joltjni.BodyFilter;
 import com.github.stephengold.joltjni.BodyLockRead;
 import com.github.stephengold.joltjni.BroadPhaseLayerFilter;
@@ -15,7 +17,10 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.system.plant.LinearSystemId;
+import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.wpilibj.simulation.DCMotorSim;
+import java.util.ArrayDeque;
+import java.util.Queue;
 
 /**
  * One swerve module as a raycast wheel on the chassis body.
@@ -88,6 +93,13 @@ public final class SwerveModuleSim {
   private final SpecifiedObjectLayerFilter fieldOnlyFilter =
       new SpecifiedObjectLayerFilter(LayerConstants.FIELD);
   private final BodyFilter bodyFilter = new BodyFilter();
+
+  private static final int CACHE_CAPACITY = 1000;
+
+  private final Queue<Angle> cachedDrivePositions = new ArrayDeque<>();
+  private final Queue<Rotation2d> cachedSteerAngles = new ArrayDeque<>();
+
+  private final Angle steerRelativeEncoderOffSet = Radians.of((Math.random() - 0.5) * 30);
 
   // Last-step results, for logging and tests
   private boolean grounded = false;
@@ -163,7 +175,8 @@ public final class SwerveModuleSim {
   public double getDriveCurrentAmps() {
     return driveCurrentAmps;
   }
-  public double getSteerCurrentAmps(){
+
+  public double getSteerCurrentAmps() {
     return steerCurrentAmps;
   }
 
@@ -177,6 +190,14 @@ public final class SwerveModuleSim {
 
   public Translation2d getMount() {
     return mount;
+  }
+
+  public Angle[] getCachedDrivePositionsRad() {
+    return cachedDrivePositions.toArray(Angle[]::new);
+  }
+
+  public Rotation2d[] getCachedSteerPosition() {
+    return cachedSteerAngles.toArray(Rotation2d[]::new);
   }
 
   // ---------------------------------------------------------------- physics
@@ -220,6 +241,7 @@ public final class SwerveModuleSim {
       driveSim.setInputVoltage(driveVolts);
       driveSim.update(dt);
       driveCurrentAmps = driveSim.getCurrentDrawAmps();
+      updateCache();
       return;
     }
     grounded = true;
@@ -282,6 +304,19 @@ public final class SwerveModuleSim {
             bodyId,
             new Vec3((float) force.getX(), (float) force.getY(), (float) force.getZ()),
             new RVec3(contact.getX(), contact.getY(), contact.getZ()));
+    updateCache();
+  }
+  /** Cache the current encoder-style positions, retaining only the latest samples. */
+  private void updateCache() {
+    cachedDrivePositions.add(Radians.of(driveSim.getAngularPositionRad()));
+    cachedSteerAngles.add(new Rotation2d(steerSim.getAngularPositionRad()));
+
+    while (cachedDrivePositions.size() > CACHE_CAPACITY) {
+      cachedDrivePositions.remove();
+    }
+    while (cachedSteerAngles.size() > CACHE_CAPACITY) {
+      cachedSteerAngles.remove();
+    }
   }
 
   // ---------------------------------------------------------------- geometry helpers

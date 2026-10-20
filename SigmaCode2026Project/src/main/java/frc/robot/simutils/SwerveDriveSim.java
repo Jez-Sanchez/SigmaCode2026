@@ -77,6 +77,10 @@ public final class SwerveDriveSim {
     };
   }
 
+  public SwerveModuleSim getModule(int index) {
+    return modules[index];
+  }
+
   // ---------------------------------------------------------------- commands
 
   /** Direct motor voltages per module. This is what your real IO should call. */

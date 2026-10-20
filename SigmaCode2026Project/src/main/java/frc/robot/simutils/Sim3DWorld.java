@@ -151,6 +151,16 @@ public final class Sim3DWorld implements AutoCloseable {
     return swerve;
   }
 
+  /** Number of physics substeps in one robot loop. */
+  public static int getSimulationSubTicksIn1Period() {
+    return COLLISION_STEPS;
+  }
+
+  /** Duration of one physics substep, in seconds. */
+  public static double getSimulationDt() {
+    return LOOP_PERIOD_SECONDS / COLLISION_STEPS;
+  }
+
   /** The robot chassis. Read its 3D pose here. (Its force-driven commands are bypassed now.) */
   public RobotBody robot() {
     return robot;

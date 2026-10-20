@@ -20,25 +20,28 @@ import frc.robot.commands.ReverseSpinDexerCommand;
 import frc.robot.commands.RunAll;
 import frc.robot.commands.RunAllTest;
 import frc.robot.commands.RunIntakeCommand;
-import frc.robot.simutils.PhysicsWorld;
 import frc.robot.simutils.RobotBody;
 import frc.robot.simutils.Sim3DWorld;
-import frc.robot.simutils.SwerveModuleSim;
+import frc.robot.subsystems.Intake.IntakeIO;
 import frc.robot.subsystems.Intake.IntakeIOReal;
 import frc.robot.subsystems.Intake.IntakeIOSim;
 import frc.robot.subsystems.Intake.IntakeMech;
 import frc.robot.subsystems.Shooter.Shooter;
 import frc.robot.subsystems.Shooter.ShooterConstants.ShooterStatus;
 import frc.robot.subsystems.Shooter.ShooterConstants.ShooterWheelState;
+import frc.robot.subsystems.Shooter.ShooterIO;
 import frc.robot.subsystems.Shooter.ShooterIOReal;
 import frc.robot.subsystems.Shooter.ShooterIOSim;
+import frc.robot.subsystems.SpinDexer.SpinDexerIO;
 import frc.robot.subsystems.SpinDexer.SpinDexerIOReal;
 import frc.robot.subsystems.SpinDexer.SpinDexerIOSim;
 import frc.robot.subsystems.SpinDexer.SpinDexerMech;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.DriveConstants;
+import frc.robot.subsystems.drive.GyroIO;
 import frc.robot.subsystems.drive.GyroIOPigeon2;
 import frc.robot.subsystems.drive.GyroIOSim;
+import frc.robot.subsystems.drive.ModuleIO;
 import frc.robot.subsystems.drive.ModuleIOMix;
 import frc.robot.subsystems.drive.ModuleIOSim;
 import frc.robot.subsystems.leds.LEDs;
@@ -66,6 +69,9 @@ public class RobotContainer {
   private CommandXboxController driver = new CommandXboxController(0);
   private Trigger bLT, bRT, bA, bB, bX, bY, dUP, dLEFTSTICK, dRIGHT, dDOWN, dSTART, bLB, bRB;
   private boolean slowMoActive = false;
+
+  private Sim3DWorld simWorld = null;
+  private RobotBody simRobot = null;
 
   // Dashboard inputs
   private LoggedDashboardChooser<Command> autoChooser =
@@ -95,16 +101,15 @@ public class RobotContainer {
                 DriveConstants.mapleSimConfig, new Pose2d(2, 2, new Rotation2d()));
         SimulatedArena.getInstance().addDriveTrainSimulation(driveSim);
 
-        Sim3DWorld simWorld = new Sim3DWorld();
-        RobotBody simRobot = new RobotBody(simWorld.getWorld(), RobotBody.Config.defaults(), 1, 1, 0);
-
+        simWorld = new Sim3DWorld();
+        simRobot = new RobotBody(simWorld.getWorld(), RobotBody.Config.defaults(), 1, 1, 0);
         swerveDrive =
             new Drive(
                 new GyroIOSim(driveSim.getGyroSimulation()),
-                new ModuleIOSim(new SwerveModuleSim(simWorld.getWorld(), simRobot.getBodyId(), DriveConstants.moduleTranslations[0], null, DriveConstants.robotMassKg, 0)),
-                new ModuleIOSim(new SwerveModuleSim(simWorld.getWorld(), simRobot.getBodyId(), DriveConstants.moduleTranslations[1], null, DriveConstants.robotMassKg, 1)),
-                new ModuleIOSim(new SwerveModuleSim(simWorld.getWorld(), simRobot.getBodyId(), DriveConstants.moduleTranslations[2], null, DriveConstants.robotMassKg, 2)),
-                new ModuleIOSim(new SwerveModuleSim(simWorld.getWorld(), simRobot.getBodyId(), DriveConstants.moduleTranslations[3], null, DriveConstants.robotMassKg, 3)),
+                new ModuleIOSim(simWorld, 0),
+                new ModuleIOSim(simWorld, 1),
+                new ModuleIOSim(simWorld, 2),
+                new ModuleIOSim(simWorld, 3),
                 (pose) -> {});
         shooterMech =
             new Shooter(
@@ -115,25 +120,17 @@ public class RobotContainer {
         leds = null;
         break;
       default:
-        driveSim =
-            new SwerveDriveSimulation(
-                DriveConstants.mapleSimConfig, new Pose2d(2, 2, new Rotation2d()));
-        SimulatedArena.getInstance().addDriveTrainSimulation(driveSim);
-
-        Sim3DWorld simWorld = new Sim3DWorld();
-        RobotBody simRobot = new RobotBody(simWorld.getWorld(), RobotBody.Config.defaults(), 1, 1, 0);
-
         swerveDrive =
             new Drive(
-                new GyroIOSim(driveSim.getGyroSimulation()),
-                new ModuleIOSim(new SwerveModuleSim(simWorld.getWorld(), simRobot.getBodyId(), DriveConstants.moduleTranslations[0], null, DriveConstants.robotMassKg, 0)),
-                new ModuleIOSim(new SwerveModuleSim(simWorld.getWorld(), simRobot.getBodyId(), DriveConstants.moduleTranslations[1], null, DriveConstants.robotMassKg, 1)),
-                new ModuleIOSim(new SwerveModuleSim(simWorld.getWorld(), simRobot.getBodyId(), DriveConstants.moduleTranslations[2], null, DriveConstants.robotMassKg, 2)),
-                new ModuleIOSim(new SwerveModuleSim(simWorld.getWorld(), simRobot.getBodyId(), DriveConstants.moduleTranslations[3], null, DriveConstants.robotMassKg, 3)),
+                new GyroIO() {},
+                new ModuleIO() {},
+                new ModuleIO() {},
+                new ModuleIO() {},
+                new ModuleIO() {},
                 (pose) -> {});
-        shooterMech = new Shooter(new ShooterIOReal());
-        spinDexerMech = new SpinDexerMech(new SpinDexerIOSim());
-        intakeMech = new IntakeMech(new IntakeIOSim(driveSim));
+        shooterMech = new Shooter(new ShooterIO() {});
+        spinDexerMech = new SpinDexerMech(new SpinDexerIO() {});
+        intakeMech = new IntakeMech(new IntakeIO() {});
         leds = null;
 
         break;

@@ -24,6 +24,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.util.Units;
+import frc.robot.simutils.SwerveModuleSim.Config;
 import org.ironmaple.simulation.drivesims.COTS;
 import org.ironmaple.simulation.drivesims.configs.DriveTrainSimulationConfig;
 import org.ironmaple.simulation.drivesims.configs.SwerveModuleSimulationConfig;
@@ -137,6 +138,20 @@ public class DriveConstants {
                   Meters.of(wheelRadiusMeters),
                   KilogramSquareMeters.of(0.02),
                   wheelCOF));
+  public static final Config swerveModuleConfig =
+      new Config(
+          wheelRadiusMeters,
+          driveMotorReduction,
+          turnMotorReduction,
+          Config.defaults().steerInertiaKgM2(),
+          Config.defaults().wheelInertiaKgM2(),
+          Config.defaults().springStiffnessNPerM(),
+          Config.defaults().springDampingNsPerM(),
+          wheelCOF,
+          driveMotorCurrentLimit,
+          Config.defaults().lateralSlipSpeedMps(),
+          driveGearbox,
+          turnGearbox);
 
   // Limelights
   public static final String kLimelightBackLeftName = "limelight-bl";

@@ -7,16 +7,14 @@
 
 package frc.robot.util;
 
-import static edu.wpi.first.units.Units.Seconds;
-
 import com.revrobotics.REVLibError;
 import com.revrobotics.spark.SparkBase;
 import edu.wpi.first.wpilibj.Timer;
+import frc.robot.simutils.Sim3DWorld;
 import java.util.function.Consumer;
 import java.util.function.DoubleConsumer;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
-import org.ironmaple.simulation.SimulatedArena;
 
 public class SparkUtil {
   /** Stores whether any error was has been detected by other utility methods. */
@@ -59,10 +57,9 @@ public class SparkUtil {
   }
 
   public static double[] getSimulationOdometryTimeStamps() {
-    final double[] odometryTimeStamps = new double[SimulatedArena.getSimulationSubTicksIn1Period()];
+    final double[] odometryTimeStamps = new double[Sim3DWorld.getSimulationSubTicksIn1Period()];
     for (int i = 0; i < odometryTimeStamps.length; i++) {
-      odometryTimeStamps[i] =
-          Timer.getFPGATimestamp() - 0.02 + i * SimulatedArena.getSimulationDt().in(Seconds);
+      odometryTimeStamps[i] = Timer.getFPGATimestamp() - 0.02 + i * Sim3DWorld.getSimulationDt();
     }
 
     return odometryTimeStamps;
