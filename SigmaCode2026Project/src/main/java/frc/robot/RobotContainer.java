@@ -20,6 +20,10 @@ import frc.robot.commands.ReverseSpinDexerCommand;
 import frc.robot.commands.RunAll;
 import frc.robot.commands.RunAllTest;
 import frc.robot.commands.RunIntakeCommand;
+import frc.robot.simutils.PhysicsWorld;
+import frc.robot.simutils.RobotBody;
+import frc.robot.simutils.Sim3DWorld;
+import frc.robot.simutils.SwerveModuleSim;
 import frc.robot.subsystems.Intake.IntakeIOReal;
 import frc.robot.subsystems.Intake.IntakeIOSim;
 import frc.robot.subsystems.Intake.IntakeMech;
@@ -90,14 +94,18 @@ public class RobotContainer {
             new SwerveDriveSimulation(
                 DriveConstants.mapleSimConfig, new Pose2d(2, 2, new Rotation2d()));
         SimulatedArena.getInstance().addDriveTrainSimulation(driveSim);
+
+        Sim3DWorld simWorld = new Sim3DWorld();
+        RobotBody simRobot = new RobotBody(simWorld.getWorld(), RobotBody.Config.defaults(), 1, 1, 0);
+
         swerveDrive =
             new Drive(
                 new GyroIOSim(driveSim.getGyroSimulation()),
-                new ModuleIOSim(driveSim.getModules()[0]),
-                new ModuleIOSim(driveSim.getModules()[1]),
-                new ModuleIOSim(driveSim.getModules()[2]),
-                new ModuleIOSim(driveSim.getModules()[3]),
-                driveSim::setSimulationWorldPose);
+                new ModuleIOSim(new SwerveModuleSim(simWorld.getWorld(), simRobot.getBodyId(), DriveConstants.moduleTranslations[0], null, DriveConstants.robotMassKg, 0)),
+                new ModuleIOSim(new SwerveModuleSim(simWorld.getWorld(), simRobot.getBodyId(), DriveConstants.moduleTranslations[1], null, DriveConstants.robotMassKg, 1)),
+                new ModuleIOSim(new SwerveModuleSim(simWorld.getWorld(), simRobot.getBodyId(), DriveConstants.moduleTranslations[2], null, DriveConstants.robotMassKg, 2)),
+                new ModuleIOSim(new SwerveModuleSim(simWorld.getWorld(), simRobot.getBodyId(), DriveConstants.moduleTranslations[3], null, DriveConstants.robotMassKg, 3)),
+                (pose) -> {});
         shooterMech =
             new Shooter(
                 new ShooterIOSim(swerveDrive::getPose, swerveDrive::getDriveSpeedsFieldRelative));
@@ -111,17 +119,21 @@ public class RobotContainer {
             new SwerveDriveSimulation(
                 DriveConstants.mapleSimConfig, new Pose2d(2, 2, new Rotation2d()));
         SimulatedArena.getInstance().addDriveTrainSimulation(driveSim);
-        shooterMech = new Shooter(new ShooterIOReal());
-        spinDexerMech = new SpinDexerMech(new SpinDexerIOSim());
-        intakeMech = new IntakeMech(new IntakeIOSim(driveSim));
+
+        Sim3DWorld simWorld = new Sim3DWorld();
+        RobotBody simRobot = new RobotBody(simWorld.getWorld(), RobotBody.Config.defaults(), 1, 1, 0);
+
         swerveDrive =
             new Drive(
                 new GyroIOSim(driveSim.getGyroSimulation()),
-                new ModuleIOSim(driveSim.getModules()[0]),
-                new ModuleIOSim(driveSim.getModules()[1]),
-                new ModuleIOSim(driveSim.getModules()[2]),
-                new ModuleIOSim(driveSim.getModules()[3]),
+                new ModuleIOSim(new SwerveModuleSim(simWorld.getWorld(), simRobot.getBodyId(), DriveConstants.moduleTranslations[0], null, DriveConstants.robotMassKg, 0)),
+                new ModuleIOSim(new SwerveModuleSim(simWorld.getWorld(), simRobot.getBodyId(), DriveConstants.moduleTranslations[1], null, DriveConstants.robotMassKg, 1)),
+                new ModuleIOSim(new SwerveModuleSim(simWorld.getWorld(), simRobot.getBodyId(), DriveConstants.moduleTranslations[2], null, DriveConstants.robotMassKg, 2)),
+                new ModuleIOSim(new SwerveModuleSim(simWorld.getWorld(), simRobot.getBodyId(), DriveConstants.moduleTranslations[3], null, DriveConstants.robotMassKg, 3)),
                 (pose) -> {});
+        shooterMech = new Shooter(new ShooterIOReal());
+        spinDexerMech = new SpinDexerMech(new SpinDexerIOSim());
+        intakeMech = new IntakeMech(new IntakeIOSim(driveSim));
         leds = null;
 
         break;

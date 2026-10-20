@@ -34,8 +34,15 @@ public final class Sim3DWorld implements AutoCloseable {
   /** Temporary: drop a couple of boxes so there is something to see. */
   private static final boolean SPAWN_TEST_BOXES = false;
 
+  /** Gap under the chassis so it hangs on the wheels instead of resting on the floor. */
+  private static final double GROUND_CLEARANCE_M = 0.05;
+
+  /** Wheel mounts sit this far from the robot center in X and Y (a 0.64 m square). */
+  private static final double MODULE_HALF_SPAN_M = 0.32;
+
   private final PhysicsWorld world;
   private final RobotBody robot;
+  private final SwerveDriveSim swerve;
 
   private int floorBoxId = -1;
   private int bumpBoxId = -1;
@@ -45,7 +52,16 @@ public final class Sim3DWorld implements AutoCloseable {
     FieldBuilder.build(world);
 
     // Start on open floor on the blue side, facing +X toward the bump
-    robot = new RobotBody(world, RobotBody.Config.defaults(), 2.0, Dims.FIELD_WIDTH / 2.0, 0.0);
+    RobotBody.Config robotConfig = RobotBody.Config.defaults();
+    robot = new RobotBody(world, robotConfig, 2.0, Dims.FIELD_WIDTH / 2.0, 0.0, GROUND_CLEARANCE_M);
+
+    swerve =
+        new SwerveDriveSim(
+            world,
+            robot,
+            robotConfig.massKg(),
+            SwerveDriveSim.squareMounts(MODULE_HALF_SPAN_M),
+            SwerveModuleSim.Config.defaults());
 
     if (SPAWN_TEST_BOXES) {
       // One box dropped onto open floor, one dropped onto the first bump's flat top
@@ -58,14 +74,20 @@ public final class Sim3DWorld implements AutoCloseable {
 
   /** Step physics once and publish everything to the log. Call from simulationPeriodic(). */
   public void periodic() {
-    robot.applyForces(); // forces must be applied before the step that consumes them
-    world.step(LOOP_PERIOD_SECONDS, COLLISION_STEPS);
+    // Forces are cleared by every Jolt step, so apply them fresh before each small sub-step. This
+    // also keeps the stiff wheel springs stable (a 4 ms step instead of a 20 ms one).
+    double subDt = LOOP_PERIOD_SECONDS / (double) COLLISION_STEPS;
+    for (int i = 0; i < COLLISION_STEPS; i++) {
+      swerve.update(subDt);
+      world.step((float) subDt, 1);
+    }
     log();
   }
 
   private void log() {
     BodyInterface bi = world.getBodyInterface();
     Logger.recordOutput("Sim3d/RobotPose3d", robot.getPose3d());
+    Logger.recordOutput("Sim3d/Swerve/NormalForcesN", swerve.getNormalForces());
 
     if (SPAWN_TEST_BOXES) {
       Logger.recordOutput("Sim3d/FloorBoxPose", toPose3d(bi, floorBoxId));
@@ -124,7 +146,12 @@ public final class Sim3DWorld implements AutoCloseable {
     };
   }
 
-  /** The robot chassis. Use this to command speeds and read its 3D pose. */
+  /** The swerve modules. Use setVoltages(...) from your drive IO, or the speed-command helper. */
+  public SwerveDriveSim swerve() {
+    return swerve;
+  }
+
+  /** The robot chassis. Read its 3D pose here. (Its force-driven commands are bypassed now.) */
   public RobotBody robot() {
     return robot;
   }

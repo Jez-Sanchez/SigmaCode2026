@@ -40,11 +40,11 @@ public final class RobotBody {
       double superWidthM, // Y footprint of the part above the chassis
       double maxAccelMps2, // limits the push so the sim cannot accelerate impossibly hard
       double maxAngularAccelRadPerSec2,
-      double velocityTimeConstantSec, // smaller = snappier tracking of the commanded speed ORIGINALLY 0.1
+      double velocityTimeConstantSec, // smaller = snappier tracking of the commanded speed
       float friction) {
 
     public static Config defaults() {
-      return new Config(52.0, 0.9, 0.9, 0.25, 0.6, 0.6, 0.6, 6.0, 20.0, 0.05, 0.1f);
+      return new Config(52.0, 0.9, 0.9, 0.25, 0.5, 0.6, 0.6, 6.0, 20.0, 0.1, 0.1f);
     }
   }
 
@@ -59,15 +59,32 @@ public final class RobotBody {
   /** Robot-relative commanded speeds: vx forward, vy left, omega counterclockwise. */
   private ChassisSpeeds target = new ChassisSpeeds();
 
+  /** Sled mode: the chassis rests directly on the floor. Used by the force-driven tests. */
   public RobotBody(
       PhysicsWorld world, Config cfg, double startX, double startY, double startYawRad) {
+    this(world, cfg, startX, startY, startYawRad, 0.0);
+  }
+
+  /**
+   * @param groundClearanceM gap between the floor and the bottom of the chassis. Use a positive
+   *     value (a few cm) when wheels carry the robot, so the chassis hangs on its suspension
+   *     instead of resting on the floor. {@code robotHeightM} stays the total height from the
+   *     floor.
+   */
+  public RobotBody(
+      PhysicsWorld world,
+      Config cfg,
+      double startX,
+      double startY,
+      double startYawRad,
+      double groundClearanceM) {
     this.world = world;
     this.cfg = cfg;
     // Approximation for a uniform rectangular plate, used only to scale the turning torque
     this.momentOfInertiaZ =
         cfg.massKg() * (cfg.lengthM() * cfg.lengthM() + cfg.widthM() * cfg.widthM()) / 12.0;
 
-    ConstShape shape = buildShape(cfg);
+    ConstShape shape = buildShape(cfg, groundClearanceM);
 
     // VERIFY: Quat.sRotation and Vec3.sAxisZ names
     Quat rotation = Quat.sRotation(Vec3.sAxisZ(), (float) startYawRad);
@@ -103,7 +120,7 @@ public final class RobotBody {
    * Because the origin is on the floor, the logged Pose3d lines up with a robot model in
    * AdvantageScope, and the trench beam hits the top box exactly at robotHeight.
    */
-  private static ConstShape buildShape(Config cfg) {
+  private static ConstShape buildShape(Config cfg, double clearance) {
     StaticCompoundShapeSettings compound = new StaticCompoundShapeSettings();
 
     // Chassis: a 3 cm convex radius rounds its edges so it can ride up the bump ramp. The swerve
@@ -113,10 +130,11 @@ public final class RobotBody {
         new BoxShape(
             new Vec3((float) (cfg.lengthM() / 2.0), (float) (cfg.widthM() / 2.0), chassisH / 2f),
             0.03f);
-    compound.addShape(new Vec3(0f, 0f, chassisH / 2f), Quat.sIdentity(), chassis);
+    compound.addShape(
+        new Vec3(0f, 0f, (float) (clearance + chassisH / 2.0)), Quat.sIdentity(), chassis);
 
     // Superstructure: only if the robot is taller than the chassis
-    double superH = cfg.robotHeightM() - cfg.chassisHeightM();
+    double superH = cfg.robotHeightM() - cfg.chassisHeightM() - clearance;
     if (superH > 0.01) {
       float radius = (float) Math.min(0.01, superH / 2.0); // radius cannot exceed the half height
       BoxShape superstructure =
@@ -127,7 +145,9 @@ public final class RobotBody {
                   (float) (superH / 2.0)),
               radius);
       compound.addShape(
-          new Vec3(0f, 0f, (float) (chassisH + superH / 2.0)), Quat.sIdentity(), superstructure);
+          new Vec3(0f, 0f, (float) (clearance + chassisH + superH / 2.0)),
+          Quat.sIdentity(),
+          superstructure);
     }
 
     // VERIFY: addShape argument order and ShapeResult method names in your jolt-jni version
@@ -168,12 +188,12 @@ public final class RobotBody {
     Vec3 w = bi.getAngularVelocity(bodyId);
 
     double yaw = getPose3d().getRotation().getZ();
-    double xDir = Math.cos(yaw);
-    double yDir = Math.sin(yaw);
+    double c = Math.cos(yaw);
+    double s = Math.sin(yaw);
 
     // Commanded velocity, rotated from the robot frame into the world frame
-    double targetVx = xDir * target.vxMetersPerSecond - yDir * target.vyMetersPerSecond;
-    double targetVy = yDir * target.vxMetersPerSecond + xDir * target.vyMetersPerSecond;
+    double targetVx = c * target.vxMetersPerSecond - s * target.vyMetersPerSecond;
+    double targetVy = s * target.vxMetersPerSecond + c * target.vyMetersPerSecond;
 
     double tau = cfg.velocityTimeConstantSec();
     double ax = (targetVx - v.getX()) / tau;
@@ -211,6 +231,7 @@ public final class RobotBody {
     BodyInterface bi = world.getBodyInterface();
     double z = FLOOR_OFFSET_M;
 
+    // VERIFY: these BodyInterface method names and signatures
     bi.setPositionAndRotation(
         bodyId,
         new RVec3(pose.getX(), pose.getY(), z),

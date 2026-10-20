@@ -10,6 +10,7 @@ import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.units.Units;
 import edu.wpi.first.units.measure.Current;
+import frc.robot.simutils.SwerveModuleSim;
 import frc.robot.util.SparkUtil;
 import java.util.Arrays;
 import org.ironmaple.simulation.drivesims.SwerveModuleSimulation;
@@ -18,10 +19,6 @@ import org.ironmaple.simulation.motorsims.SimulatedMotorController.GenericMotorC
 public class ModuleIOSim implements ModuleIO {
 
   private SwerveModuleSimulation moduleSim;
-
-  private final GenericMotorController driveMotor;
-  private final GenericMotorController turnMotor;
-
   private boolean driveCloseLoop = false;
   private boolean turnCloseLoop = false;
   private final PIDController driveController = new PIDController(driveSimP, 0, 0);
@@ -30,16 +27,11 @@ public class ModuleIOSim implements ModuleIO {
   private double driveAppliedVolts = 0.0;
   private double turnAppliedVolts = 0.0;
 
-  public ModuleIOSim(SwerveModuleSimulation moduleSim) {
+  private SwerveModuleSim swerveSim;
 
-    this.moduleSim = moduleSim;
+  public ModuleIOSim(SwerveModuleSim swerveSim) {
 
-    this.driveMotor =
-        moduleSim
-            .useGenericMotorControllerForDrive()
-            .withCurrentLimit(Current.ofBaseUnits(50, Amps));
-    this.turnMotor =
-        moduleSim.useGenericControllerForSteer().withCurrentLimit(Current.ofBaseUnits(20, Amps));
+    this.swerveSim= swerveSim;
 
     turnController.enableContinuousInput(-Math.PI, Math.PI);
   }
@@ -61,27 +53,27 @@ public class ModuleIOSim implements ModuleIO {
     } else {
       turnController.reset();
     }
-    driveMotor.requestVoltage(Volts.of(driveAppliedVolts));
-    turnMotor.requestVoltage(Volts.of(turnAppliedVolts));
+    swerveSim.setDriveVoltage(driveAppliedVolts);
+    swerveSim.setSteerVoltage(turnAppliedVolts);
 
     inputs.driveConnected = true;
-    inputs.drivePositionRad = moduleSim.getDriveWheelFinalPosition().in(Radians);
-    inputs.driveVelocityRadPerSec = moduleSim.getDriveWheelFinalSpeed().in(RadiansPerSecond);
+    inputs.drivePositionRad = swerveSim.getDrivePositionRad();
+    inputs.driveVelocityRadPerSec =  swerveSim.getDriveVelocityRadPerSec();
     inputs.driveAppliedVolts = driveAppliedVolts;
-    inputs.driveCurrentAmps = Math.abs((moduleSim.getDriveMotorStatorCurrent().in(Amps)));
+    inputs.driveCurrentAmps = Math.abs(swerveSim.getDriveCurrentAmps());
 
     inputs.turnConnected = true;
-    inputs.turnPosition = Rotation2d.fromRadians(moduleSim.getSteerAbsoluteFacing().getRadians());
-    inputs.turnVelocityRadPerSec = moduleSim.getSteerAbsoluteEncoderSpeed().in(RadiansPerSecond);
+    inputs.turnPosition = swerveSim.getSteerAngle();
+    inputs.turnVelocityRadPerSec = swerveSim.getSteerVelocityRadPerSec();
     inputs.turnAppliedVolts = turnAppliedVolts;
-    inputs.turnCurrentAmps = Math.abs((moduleSim.getSteerMotorStatorCurrent().in(Amps)));
+    inputs.turnCurrentAmps = Math.abs(swerveSim.getSteerCurrentAmps());
 
     inputs.odometryTimestamps = SparkUtil.getSimulationOdometryTimeStamps();
     inputs.odometryDrivePositionsRad =
-        Arrays.stream(moduleSim.getCachedDriveWheelFinalPositions())
+        Arrays.stream(moduleSim.getCachedDriveWheelFinalPositions())//Change later
             .mapToDouble(angle -> angle.in(Radians))
             .toArray();
-    inputs.odometryTurnPositions = moduleSim.getCachedSteerAbsolutePositions();
+    inputs.odometryTurnPositions = moduleSim.getCachedSteerAbsolutePositions();//Change later
   }
 
   @Override
